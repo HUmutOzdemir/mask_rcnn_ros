@@ -14,8 +14,8 @@ import random
 import numpy as np
 import cv2
 
-from config import Config
-import utils
+from mask_rcnn_ros.config import Config
+from mask_rcnn_ros import utils
 
 
 class ShapesConfig(Config):

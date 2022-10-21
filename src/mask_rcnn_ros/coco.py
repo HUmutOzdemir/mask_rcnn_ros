@@ -37,20 +37,20 @@ import numpy as np
 # I submitted a pull request https://github.com/cocodataset/cocoapi/pull/50
 # If the PR is merged then use the original repo.
 # Note: Edit PythonAPI/Makefile and replace "python" with "python3".
-# from pycocotools.coco import COCO
-# from pycocotools.cocoeval import COCOeval
-# from pycocotools import mask as maskUtils
+from pycocotools.coco import COCO
+from pycocotools.cocoeval import COCOeval
+from pycocotools import mask as maskUtils
 
 import zipfile
-from six.moves.urllib import request
+import urllib.request
 import shutil
 
-from config import Config
-import utils
-import model as modellib
+from mask_rcnn_ros.config import Config
+from mask_rcnn_ros import utils
+from mask_rcnn_ros import model as modellib
 
 # Root directory of the project
-ROOT_DIR = os.path.dirname(__file__)
+ROOT_DIR = os.getcwd()
 
 # Path to trained weights file
 COCO_MODEL_PATH = os.path.join(ROOT_DIR, "mask_rcnn_coco.h5")
@@ -171,7 +171,7 @@ class CocoDataset(utils.Dataset):
         if not os.path.exists(imgDir):
             os.makedirs(imgDir)
             print("Downloading images to " + imgZipFile + " ...")
-            with request.urlopen(imgURL) as resp, open(imgZipFile, 'wb') as out:
+            with urllib.request.urlopen(imgURL) as resp, open(imgZipFile, 'wb') as out:
                 shutil.copyfileobj(resp, out)
             print("... done downloading.")
             print("Unzipping " + imgZipFile)
@@ -205,7 +205,7 @@ class CocoDataset(utils.Dataset):
         if not os.path.exists(annFile):
             if not os.path.exists(annZipFile):
                 print("Downloading zipped annotations to " + annZipFile + " ...")
-                with request.urlopen(annURL) as resp, open(annZipFile, 'wb') as out:
+                with urllib.request.urlopen(annURL) as resp, open(annZipFile, 'wb') as out:
                     shutil.copyfileobj(resp, out)
                 print("... done downloading.")
             print("Unzipping " + annZipFile)

@@ -16,9 +16,8 @@ import tensorflow as tf
 import scipy.misc
 import skimage.color
 import skimage.io
-from six.moves.urllib import request
+import urllib.request
 import shutil
-import contextlib
 
 # URL from which to download the latest COCO trained weights
 COCO_MODEL_URL = "https://github.com/matterport/Mask_RCNN/releases/download/v2.0/mask_rcnn_coco.h5"
@@ -91,24 +90,6 @@ def compute_overlaps(boxes1, boxes2):
     for i in range(overlaps.shape[1]):
         box2 = boxes2[i]
         overlaps[:, i] = compute_iou(box2, boxes1, area2[i], area1)
-    return overlaps
-
-
-def compute_overlaps_masks(masks1, masks2):
-    '''Computes IoU overlaps between two sets of masks.
-    masks1, masks2: [Height, Width, instances]
-    '''
-    # flatten masks
-    masks1 = np.reshape(masks1 > .5, (-1, masks1.shape[-1])).astype(np.float32)
-    masks2 = np.reshape(masks2 > .5, (-1, masks2.shape[-1])).astype(np.float32)
-    area1 = np.sum(masks1, axis=0)
-    area2 = np.sum(masks2, axis=0)
-
-    # intersections and union
-    intersections = np.dot(masks1.T, masks2)
-    union = area1[:, None] + area2[None, :] - intersections
-    overlaps = intersections / union
-
     return overlaps
 
 
@@ -290,7 +271,6 @@ class Dataset(object):
         TODO: class map is not supported yet. When done, it should handle mapping
               classes from different datasets to the same class ID.
         """
-
         def clean_name(name):
             """Returns a shorter version of object names for cleaner display."""
             return ",".join(name.split(",")[:1])
@@ -418,7 +398,7 @@ def resize_image(image, min_dim=None, max_dim=None, padding=False):
     # Resize image and mask
     if scale != 1:
         image = scipy.misc.imresize(
-            image, (int(round(h * scale)), int(round(w * scale))))
+            image, (round(h * scale), round(w * scale)))
     # Need padding?
     if padding:
         # Get new height and width
@@ -585,8 +565,8 @@ def trim_zeros(x):
     return x[~np.all(x == 0, axis=1)]
 
 
-def compute_ap(gt_boxes, gt_class_ids, gt_masks,
-               pred_boxes, pred_class_ids, pred_scores, pred_masks,
+def compute_ap(gt_boxes, gt_class_ids,
+               pred_boxes, pred_class_ids, pred_scores,
                iou_threshold=0.5):
     """Compute Average Precision at a set IoU threshold (default 0.5).
 
@@ -599,17 +579,15 @@ def compute_ap(gt_boxes, gt_class_ids, gt_masks,
     # Trim zero padding and sort predictions by score from high to low
     # TODO: cleaner to do zero unpadding upstream
     gt_boxes = trim_zeros(gt_boxes)
-    gt_masks = gt_masks[..., :gt_boxes.shape[0]]
     pred_boxes = trim_zeros(pred_boxes)
     pred_scores = pred_scores[:pred_boxes.shape[0]]
     indices = np.argsort(pred_scores)[::-1]
     pred_boxes = pred_boxes[indices]
     pred_class_ids = pred_class_ids[indices]
     pred_scores = pred_scores[indices]
-    pred_masks = pred_masks[..., indices]
 
-    # Compute IoU overlaps [pred_masks, gt_masks]
-    overlaps = compute_overlaps_masks(pred_masks, gt_masks)
+    # Compute IoU overlaps [pred_boxes, gt_boxes]
+    overlaps = compute_overlaps(pred_boxes, gt_boxes)
 
     # Loop through ground truth boxes and find matching predictions
     match_count = 0
@@ -724,7 +702,7 @@ def download_trained_weights(coco_model_path, verbose=1):
     """
     if verbose > 0:
         print("Downloading pretrained model to " + coco_model_path + " ...")
-    with contextlib.closing(request.urlopen(COCO_MODEL_URL)) as resp, open(coco_model_path, 'wb') as out:
+    with urllib.request.urlopen(COCO_MODEL_URL) as resp, open(coco_model_path, 'wb') as out:
         shutil.copyfileobj(resp, out)
     if verbose > 0:
         print("... done downloading pretrained model!")
