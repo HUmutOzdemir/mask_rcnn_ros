@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import rospy
 import torch
-from mask_rcnn_node.ros_bridge import MaskRCNNROS
+from mask_rcnn_ros.ros_bridge import MaskRCNNROS
 
 MASK_RCNN_VERSION = "v1"
 
@@ -11,7 +11,9 @@ def main():
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
+    print("Initializing Mask R-CNN...")
     node = MaskRCNNROS(MASK_RCNN_VERSION, device=device)
+    print("Mask R-CNN is Initialized...")
     node.run()
 
 

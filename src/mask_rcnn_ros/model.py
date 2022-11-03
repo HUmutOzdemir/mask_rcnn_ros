@@ -16,11 +16,19 @@ class MaskRCNN(nn.Module):
         version: str = "v1",
         config: dict = CONFIG,
         class_names: List[str] = COCO_CLASS_NAMES,
+        mode: str = "eval",
         device: str = "cuda",
     ):
         super(MaskRCNN, self).__init__()
+
+        assert mode in ["train", "eval"], "Possible Modes: [train, eval]"
+
         self.model = MaskRCNN._initialize_model(version, config)
         self.model.to(device)
+        if mode == "train":
+            self.model.train()
+        elif mode == "eval":
+            self.model.eval()
         self.device = device
         self.transform = T.Compose([T.ToTensor()])
         self.class_names = class_names

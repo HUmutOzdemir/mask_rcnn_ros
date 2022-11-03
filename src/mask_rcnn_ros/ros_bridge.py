@@ -1,5 +1,6 @@
 import rospy
 import threading
+import torch
 import numpy as np
 from cv_bridge import CvBridge
 
@@ -22,13 +23,13 @@ class MaskRCNNROS:
         self._publish_rate = rospy.get_param("~publish_rate", 100)
 
         # Initialize Model
-        self.model = MaskRCNN(version, device)
+        self.model = MaskRCNN(version=version, device=device)
 
         self._last_msg = None
         self._msg_lock = threading.Lock()
 
         # Initialize Publishers and Listeners
-        self._result_pub = rospy.Publisher("~result", RegionOfInterest, queue_size=1)
+        self._result_pub = rospy.Publisher("~result", Result, queue_size=1)
         self._vis_pub = rospy.Publisher("~visualization", Image, queue_size=1)
         rospy.Subscriber(
             self._rgb_input_topic, Image, self._image_callback, queue_size=1
@@ -43,7 +44,8 @@ class MaskRCNNROS:
                 # Covert Image ROS Message to Numpy Array
                 image = self._cv_bridge.imgmsg_to_cv2(msg, "bgr8")
                 # Run MaskRCNN
-                result = self.model(image)[0]
+                with torch.no_grad():
+                    result = self.model(image)[0]
                 # Publish Result Message
                 self._result_pub.publish(self._build_result_msg(msg, result))
 
@@ -68,17 +70,17 @@ class MaskRCNNROS:
             msg.scores.append(score.item())
             msg.masks.append(self._build_mask_msg(mask, header))
 
-        return result
+        return msg
 
     def _build_roi_msg(self, bbox) -> RegionOfInterest:
         x1, y1, x2, y2 = bbox.cpu().detach().numpy()
 
         box = RegionOfInterest()
 
-        box.x_offset = np.asscalar(x1)
-        box.y_offset = np.asscalar(y1)
-        box.height = np.asscalar(y2 - y1)
-        box.width = np.asscalar(x2 - x1)
+        box.x_offset = x1.item()
+        box.y_offset = y1.item()
+        box.height = (y2 - y1).item()
+        box.width = (x2 - x1).item()
 
         return box
 
